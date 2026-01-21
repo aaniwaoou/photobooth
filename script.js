@@ -1,3 +1,4 @@
+// Elements
 const video = document.getElementById("video");
 const countdown = document.getElementById("countdown");
 const startBtn = document.getElementById("startBtn");
@@ -9,21 +10,21 @@ const retakeBtn = document.getElementById("retake");
 const photostripCanvas = document.getElementById("photostrip");
 const download = document.getElementById("download");
 
-const STRIP_WIDTH = 360;   // for preview
-const STRIP_HEIGHT = 480 * 3; // 3 photos stacked
-
+// Constants
+const STRIP_WIDTH = 360;
 const PHOTO_WIDTH = 360;
 const PHOTO_HEIGHT = 480;
+const STRIP_HEIGHT = PHOTO_HEIGHT * 3;
 
 let photos = [];
 let currentPhoto = 0;
 
-// start camera
+// Start camera
 navigator.mediaDevices.getUserMedia({ video: true })
   .then(stream => video.srcObject = stream)
   .catch(err => alert("Camera not accessible: " + err));
 
-// Start booth
+// Start button
 startBtn.addEventListener("click", () => {
   photos = [];
   currentPhoto = 0;
@@ -31,7 +32,7 @@ startBtn.addEventListener("click", () => {
   takeCountdownPhoto();
 });
 
-// Countdown + capture
+// Countdown before taking photo
 function takeCountdownPhoto() {
   let count = 3;
   countdown.innerText = count;
@@ -48,11 +49,9 @@ function takeCountdownPhoto() {
   }, 1000);
 }
 
-// Show preview
+// Show preview canvas
 function showPreview() {
   previewContainer.hidden = false;
-
-  // draw video frame to preview canvas
   previewCanvas.width = PHOTO_WIDTH;
   previewCanvas.height = PHOTO_HEIGHT;
   const ctx = previewCanvas.getContext("2d");
@@ -61,17 +60,14 @@ function showPreview() {
 
 // Confirm photo
 confirmBtn.addEventListener("click", () => {
-  // save photo data
   const photoData = previewCanvas.toDataURL("image/png");
   photos.push(photoData);
   previewContainer.hidden = true;
   currentPhoto++;
 
   if (currentPhoto < 3) {
-    // take next photo
     takeCountdownPhoto();
   } else {
-    // all 3 photos taken → create photostrip
     createPhotostrip();
   }
 });
@@ -82,30 +78,31 @@ retakeBtn.addEventListener("click", () => {
   takeCountdownPhoto();
 });
 
-// Combine into photostrip
+// Create photostrip
 function createPhotostrip() {
   photostripCanvas.width = STRIP_WIDTH;
   photostripCanvas.height = STRIP_HEIGHT;
   const ctx = photostripCanvas.getContext("2d");
 
+  let loaded = 0;
+
   photos.forEach((dataURL, index) => {
     const img = new Image();
     img.onload = () => {
       ctx.drawImage(img, 0, index * PHOTO_HEIGHT, PHOTO_WIDTH, PHOTO_HEIGHT);
-
-      // draw frame on top
-      const frame = new Image();
-      frame.src = "frames/" + frameSelect.value;
-      frame.onload = () => {
-        ctx.drawImage(frame, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
-
-        if (index === photos.length - 1) {
-          // last photo processed → show download
+      loaded++;
+      if (loaded === photos.length) {
+        // draw frame after all photos
+        const frame = new Image();
+        frame.src = "frames/" + frameSelect.value;
+        frame.onload = () => {
+          ctx.drawImage(frame, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
+          // show download
           download.href = photostripCanvas.toDataURL("image/png");
           download.hidden = false;
           startBtn.disabled = false;
-        }
-      };
+        };
+      }
     };
     img.src = dataURL;
   });

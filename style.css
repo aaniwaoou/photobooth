@@ -8,6 +8,7 @@ video {
   width: 360px;
   height: 480px;
   border: 2px solid #333;
+  margin-bottom: 10px;
 }
 
 #previewCanvas {
@@ -26,7 +27,7 @@ button {
   font-size: 48px;
   font-weight: bold;
   position: absolute;
-  top: 100px;
+  top: 120px;
   width: 100%;
   text-align: center;
   color: red;
