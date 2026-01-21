@@ -1,22 +1,33 @@
 body {
+  font-family: sans-serif;
   text-align: center;
-  font-family: Arial, sans-serif;
-}
-
-.booth {
-  position: relative;
-  width: 300px;
-  margin: auto;
+  background: #f2f2f2;
 }
 
 video {
-  width: 100%;
+  width: 360px;
+  height: 480px;
+  border: 2px solid #333;
+}
+
+#previewCanvas {
+  border: 2px solid #333;
+  width: 360px;
+  height: 480px;
+}
+
+button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
 }
 
 #countdown {
-  position: absolute;
-  top: 40%;
-  width: 100%;
   font-size: 48px;
-  color: white;
+  font-weight: bold;
+  position: absolute;
+  top: 100px;
+  width: 100%;
+  text-align: center;
+  color: red;
 }

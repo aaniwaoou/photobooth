@@ -1,23 +1,38 @@
 const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
 const countdown = document.getElementById("countdown");
+const startBtn = document.getElementById("startBtn");
+const frameSelect = document.getElementById("frameSelect");
+const previewContainer = document.getElementById("previewContainer");
+const previewCanvas = document.getElementById("previewCanvas");
+const confirmBtn = document.getElementById("confirm");
+const retakeBtn = document.getElementById("retake");
+const photostripCanvas = document.getElementById("photostrip");
 const download = document.getElementById("download");
 
-const STRIP_WIDTH = 1240;
-const STRIP_HEIGHT = 3508;
+const STRIP_WIDTH = 360;   // for preview
+const STRIP_HEIGHT = 480 * 3; // 3 photos stacked
 
-// where the photo should appear inside the frame
-// 🔴 YOU CAN ADJUST THESE NUMBERS LATER
-const PHOTO_X = 120;
-const PHOTO_Y = 250;
-const PHOTO_WIDTH = 1000;
-const PHOTO_HEIGHT = 3000;
+const PHOTO_WIDTH = 360;
+const PHOTO_HEIGHT = 480;
 
-// camera
+let photos = [];
+let currentPhoto = 0;
+
+// start camera
 navigator.mediaDevices.getUserMedia({ video: true })
-  .then(stream => video.srcObject = stream);
+  .then(stream => video.srcObject = stream)
+  .catch(err => alert("Camera not accessible: " + err));
 
-function startBooth() {
+// Start booth
+startBtn.addEventListener("click", () => {
+  photos = [];
+  currentPhoto = 0;
+  startBtn.disabled = true;
+  takeCountdownPhoto();
+});
+
+// Countdown + capture
+function takeCountdownPhoto() {
   let count = 3;
   countdown.innerText = count;
 
@@ -27,81 +42,71 @@ function startBooth() {
 
     if (count === 0) {
       clearInterval(timer);
-      takePhoto();
+      countdown.innerText = "";
+      showPreview();
     }
   }, 1000);
 }
 
-function takePhoto() {
-  canvas.width = STRIP_WIDTH;
-  canvas.height = STRIP_HEIGHT;
-  const ctx = canvas.getContext("2d");
+// Show preview
+function showPreview() {
+  previewContainer.hidden = false;
 
-  // clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // get camera dimensions
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-
-  // crop camera to fit portrait area
-  const videoAspect = vw / vh;
-  const photoAspect = PHOTO_WIDTH / PHOTO_HEIGHT;
-
-  let sx, sy, sw, sh;
-
-  if (videoAspect > photoAspect) {
-    // camera too wide → crop sides
-    sh = vh;
-    sw = vh * photoAspect;
-    sx = (vw - sw) / 2;
-    sy = 0;
-  } else {
-    // camera too tall → crop top/bottom
-    sw = vw;
-    sh = vw / photoAspect;
-    sx = 0;
-    sy = (vh - sh) / 2;
-  }
-
-  // draw cropped photo into strip
-  ctx.drawImage(
-    video,
-    sx, sy, sw, sh,
-    PHOTO_X, PHOTO_Y,
-    PHOTO_WIDTH, PHOTO_HEIGHT
-  );
-
-  // draw frame on top
-  const frame = new Image();
-  frame.src = "frames/" + document.getElementById("frameSelect").value;
-
-  frame.onload = () => {
-    ctx.drawImage(frame, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
-    download.href = canvas.toDataURL("image/png");
-    download.style.display = "inline-block";
-  };
+  // draw video frame to preview canvas
+  previewCanvas.width = PHOTO_WIDTH;
+  previewCanvas.height = PHOTO_HEIGHT;
+  const ctx = previewCanvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
 }
 
-  // draw camera photo first
-  ctx.drawImage(
-    video,
-    PHOTO_X,
-    PHOTO_Y,
-    PHOTO_WIDTH,
-    PHOTO_HEIGHT
-  );
+// Confirm photo
+confirmBtn.addEventListener("click", () => {
+  // save photo data
+  const photoData = previewCanvas.toDataURL("image/png");
+  photos.push(photoData);
+  previewContainer.hidden = true;
+  currentPhoto++;
 
-  // load frame
-  const frame = new Image();
-  const selected = document.getElementById("frameSelect").value;
-  frame.src = "frames/" + selected;
+  if (currentPhoto < 3) {
+    // take next photo
+    takeCountdownPhoto();
+  } else {
+    // all 3 photos taken → create photostrip
+    createPhotostrip();
+  }
+});
 
-  frame.onload = () => {
-    // draw frame on top
-    ctx.drawImage(frame, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
+// Retake photo
+retakeBtn.addEventListener("click", () => {
+  previewContainer.hidden = true;
+  takeCountdownPhoto();
+});
 
-    // enable download
-    download.href = canvas.toDataURL("image/png");
-    download.style.display = "inline-block";
-  };
+// Combine into photostrip
+function createPhotostrip() {
+  photostripCanvas.width = STRIP_WIDTH;
+  photostripCanvas.height = STRIP_HEIGHT;
+  const ctx = photostripCanvas.getContext("2d");
+
+  photos.forEach((dataURL, index) => {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, index * PHOTO_HEIGHT, PHOTO_WIDTH, PHOTO_HEIGHT);
+
+      // draw frame on top
+      const frame = new Image();
+      frame.src = "frames/" + frameSelect.value;
+      frame.onload = () => {
+        ctx.drawImage(frame, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
+
+        if (index === photos.length - 1) {
+          // last photo processed → show download
+          download.href = photostripCanvas.toDataURL("image/png");
+          download.hidden = false;
+          startBtn.disabled = false;
+        }
+      };
+    };
+    img.src = dataURL;
+  });
+}

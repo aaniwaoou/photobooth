@@ -18,12 +18,17 @@
 <div class="booth">
   <video id="video" autoplay></video>
   <div id="countdown"></div>
+  <div id="previewContainer" hidden>
+    <canvas id="previewCanvas"></canvas>
+    <button id="confirm">Confirm</button>
+    <button id="retake">Retake</button>
+  </div>
 </div>
 
-<button onclick="startBooth()">Start</button>
-<a id="download" download="photobooth.png">Download</a>
+<button id="startBtn">Start Photobooth</button>
+<a id="download" download="photostrip.png" hidden>Download Photostrip</a>
 
-<canvas id="canvas" hidden></canvas>
+<canvas id="photostrip" hidden></canvas>
 
 <script src="script.js"></script>
 </body>
