@@ -1,0 +1,22 @@
+body {
+  text-align: center;
+  font-family: Arial, sans-serif;
+}
+
+.booth {
+  position: relative;
+  width: 300px;
+  margin: auto;
+}
+
+video {
+  width: 100%;
+}
+
+#countdown {
+  position: absolute;
+  top: 40%;
+  width: 100%;
+  font-size: 48px;
+  color: white;
+}

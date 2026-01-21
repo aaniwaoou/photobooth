@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Photobooth</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Photobooth</h1>
+
+<select id="frameSelect">
+  <option value="frame1.png">Frame 1</option>
+  <option value="frame2.png">Frame 2</option>
+  <option value="frame3.png">Frame 3</option>
+</select>
+
+<div class="booth">
+  <video id="video" autoplay></video>
+  <div id="countdown"></div>
+</div>
+
+<button onclick="startBooth()">Start</button>
+<a id="download" download="photobooth.png">Download</a>
+
+<canvas id="canvas" hidden></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
