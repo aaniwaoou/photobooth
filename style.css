@@ -15,6 +15,7 @@ video {
   border: 2px solid #333;
   width: 360px;
   height: 480px;
+  touch-action: none; /* enable drag/pinch on mobile */
 }
 
 button {
