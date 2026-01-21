@@ -3,8 +3,17 @@
 // -----------------------
 const STRIP_WIDTH = 1240;
 const STRIP_HEIGHT = 3508;
+
+const FRAME_WIDTH = 1093;
+const FRAME_HEIGHT = 763;
 const FRAME_COUNT = 3;
-const FRAME_HEIGHT = STRIP_HEIGHT / FRAME_COUNT;
+
+// Positions of each frame (top-left corner) on the strip
+const FRAME_POSITIONS = [
+  { x: (STRIP_WIDTH - FRAME_WIDTH)/2, y: 200 },   // frame 1
+  { x: (STRIP_WIDTH - FRAME_WIDTH)/2, y: 1400 },  // frame 2
+  { x: (STRIP_WIDTH - FRAME_WIDTH)/2, y: 2600 }   // frame 3
+];
 
 const PREVIEW_WIDTH = 360;
 const PREVIEW_HEIGHT = 480;
@@ -94,7 +103,7 @@ function drawPreview(){
   const ctx = previewCanvas.getContext("2d");
   ctx.clearRect(0,0,PREVIEW_WIDTH,PREVIEW_HEIGHT);
 
-  // Draw video snapshot scaled to width
+  // Draw video snapshot
   const scaledWidth = PREVIEW_WIDTH * userScale;
   const scaledHeight = video.videoHeight * (scaledWidth / video.videoWidth);
 
@@ -103,12 +112,15 @@ function drawPreview(){
   ctx.drawImage(video,0,0,video.videoWidth,video.videoHeight,0,0,scaledWidth,scaledHeight);
   ctx.restore();
 
-  // Draw correct portion of frame
+  // Draw frame overlay for current photo
   const frameImg = new Image();
-  frameImg.src = "frames/"+frameSelect.value;
-  frameImg.onload = ()=>{
-    const srcY = FRAME_HEIGHT*currentPhoto;
-    ctx.drawImage(frameImg,0,srcY,STRIP_WIDTH,FRAME_HEIGHT,0,0,PREVIEW_WIDTH,PREVIEW_HEIGHT);
+  frameImg.src = "frames/" + frameSelect.value;
+  frameImg.onload = () => {
+    // Fit the correct frame to preview
+    ctx.drawImage(frameImg,
+      0, 0, FRAME_WIDTH, FRAME_HEIGHT,    // source slice (top-left corner, frame size)
+      0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT // fit into preview
+    );
   };
 }
 
@@ -192,20 +204,25 @@ function generatePhotostrip(){
   const ctx = photostripCanvas.getContext("2d");
 
   photos.forEach((p,i)=>{
-    const scale = STRIP_WIDTH / video.videoWidth * p.scale;
-    const scaledH = video.videoHeight * scale;
-    const offsetX = p.offsetX * (STRIP_WIDTH / PREVIEW_WIDTH);
-    const offsetY = p.offsetY * (FRAME_HEIGHT / PREVIEW_HEIGHT);
+    const pos = FRAME_POSITIONS[i];
+    const scaleX = FRAME_WIDTH / PREVIEW_WIDTH * p.scale;
+    const scaleY = FRAME_HEIGHT / PREVIEW_HEIGHT * p.scale;
 
-    ctx.drawImage(video,0,0,video.videoWidth,video.videoHeight,
-      offsetX, i*FRAME_HEIGHT + offsetY, STRIP_WIDTH* p.scale, scaledH);
+    const drawWidth = video.videoWidth * scaleX;
+    const drawHeight = video.videoHeight * scaleY;
+
+    const offsetX = pos.x + p.offsetX * (FRAME_WIDTH / PREVIEW_WIDTH);
+    const offsetY = pos.y + p.offsetY * (FRAME_HEIGHT / PREVIEW_HEIGHT);
+
+    ctx.drawImage(video, 0,0,video.videoWidth,video.videoHeight,
+      offsetX, offsetY, drawWidth, drawHeight);
   });
 
-  const frameImg=new Image();
-  frameImg.src="frames/"+frameSelect.value;
-  frameImg.onload=()=>{
-    ctx.drawImage(frameImg,0,0,STRIP_WIDTH,STRIP_HEIGHT);
-    download.href=photostripCanvas.toDataURL("image/png");
+  const frameImg = new Image();
+  frameImg.src = "frames/" + frameSelect.value;
+  frameImg.onload = ()=>{
+    ctx.drawImage(frameImg, 0,0,STRIP_WIDTH,STRIP_HEIGHT);
+    download.href = photostripCanvas.toDataURL("image/png");
     download.hidden=false;
     startBtn.disabled=false;
   };
