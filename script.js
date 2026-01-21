@@ -8,7 +8,7 @@ const FRAME_WIDTH = 1093;
 const FRAME_HEIGHT = 763;
 const FRAME_COUNT = 3;
 
-// Positions of each frame (top-left corner) on the strip
+// Top-left positions of each frame on the strip
 const FRAME_POSITIONS = [
   { x: (STRIP_WIDTH - FRAME_WIDTH)/2, y: 200 },   // frame 1
   { x: (STRIP_WIDTH - FRAME_WIDTH)/2, y: 1400 },  // frame 2
@@ -83,15 +83,24 @@ function takeCountdownPhoto(){
 }
 
 // -----------------------
-// Show preview
+// Show preview (mobile-friendly & retina)
 // -----------------------
 function showPreview(){
   previewContainer.hidden=false;
-  previewCanvas.width=PREVIEW_WIDTH;
-  previewCanvas.height=PREVIEW_HEIGHT;
+
+  const dpr = window.devicePixelRatio || 1;
+
+  // Canvas setup for high-DPI screens
+  previewCanvas.width = PREVIEW_WIDTH * dpr;
+  previewCanvas.height = PREVIEW_HEIGHT * dpr;
+  previewCanvas.style.width = PREVIEW_WIDTH + "px";
+  previewCanvas.style.height = PREVIEW_HEIGHT + "px";
+
+  const ctx = previewCanvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
   userOffset={x:0,y:0};
   userScale=1;
-
   drawPreview();
   enableInteraction();
 }
@@ -103,7 +112,7 @@ function drawPreview(){
   const ctx = previewCanvas.getContext("2d");
   ctx.clearRect(0,0,PREVIEW_WIDTH,PREVIEW_HEIGHT);
 
-  // Draw video snapshot
+  // Draw video snapshot scaled
   const scaledWidth = PREVIEW_WIDTH * userScale;
   const scaledHeight = video.videoHeight * (scaledWidth / video.videoWidth);
 
@@ -116,16 +125,16 @@ function drawPreview(){
   const frameImg = new Image();
   frameImg.src = "frames/" + frameSelect.value;
   frameImg.onload = () => {
-    // Fit the correct frame to preview
+    // Fit the correct frame into preview canvas
     ctx.drawImage(frameImg,
-      0, 0, FRAME_WIDTH, FRAME_HEIGHT,    // source slice (top-left corner, frame size)
-      0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT // fit into preview
+      0, 0, FRAME_WIDTH, FRAME_HEIGHT,    // source slice
+      0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT // fit preview
     );
   };
 }
 
 // -----------------------
-// Interaction
+// Interaction (mouse & touch)
 // -----------------------
 function enableInteraction(){
   // Mouse drag
@@ -141,7 +150,7 @@ function enableInteraction(){
   previewCanvas.onmouseup=()=>{dragging=false;};
   previewCanvas.onmouseleave=()=>{dragging=false;};
 
-  // Touch drag / pinch
+  // Touch drag/pinch
   previewCanvas.ontouchstart=(e)=>{
     e.preventDefault();
     if(e.touches.length===1){
@@ -170,6 +179,9 @@ function enableInteraction(){
   };
 }
 
+// -----------------------
+// Helper: distance for pinch
+// -----------------------
 function getDistance(t1,t2){
   const dx=t2.clientX-t1.clientX;
   const dy=t2.clientY-t1.clientY;
@@ -196,11 +208,11 @@ retakeBtn.addEventListener("click",()=>{
 });
 
 // -----------------------
-// Generate final strip
+// Generate final photostrip
 // -----------------------
 function generatePhotostrip(){
-  photostripCanvas.width=STRIP_WIDTH;
-  photostripCanvas.height=STRIP_HEIGHT;
+  photostripCanvas.width = STRIP_WIDTH;
+  photostripCanvas.height = STRIP_HEIGHT;
   const ctx = photostripCanvas.getContext("2d");
 
   photos.forEach((p,i)=>{
