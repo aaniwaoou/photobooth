@@ -55,7 +55,16 @@ function showPreview() {
   previewCanvas.width = PHOTO_WIDTH;
   previewCanvas.height = PHOTO_HEIGHT;
   const ctx = previewCanvas.getContext("2d");
+
+  // Draw the live camera feed
   ctx.drawImage(video, 0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+
+  // Draw the frame on top of preview
+  const frame = new Image();
+  frame.src = "frames/" + frameSelect.value;
+  frame.onload = () => {
+    ctx.drawImage(frame, 0, 0, PHOTO_WIDTH, PHOTO_HEIGHT);
+  };
 }
 
 // Confirm photo
