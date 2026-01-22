@@ -24,7 +24,6 @@ const video = document.getElementById("video");
 const countdown = document.getElementById("countdown");
 const photoCounter = document.getElementById("photoCounter");
 const flash = document.getElementById("flash");
-const qrContainer = document.getElementById("qrContainer");
 
 const startBtn = document.getElementById("startBtn");
 const frameSelect = document.getElementById("frameSelect");
@@ -32,6 +31,7 @@ const previewContainer = document.getElementById("previewContainer");
 const previewCanvas = document.getElementById("previewCanvas");
 const confirmBtn = document.getElementById("confirm");
 const retakeBtn = document.getElementById("retake");
+
 const photostripCanvas = document.getElementById("photostrip");
 const download = document.getElementById("download");
 
@@ -39,7 +39,7 @@ const download = document.getElementById("download");
 // STATE
 // =======================
 let currentPhoto = 0;
-let photos = [];
+let photos = []; // { image, offset, scale }
 
 let offset = { x: 0, y: 0 };
 let scale = 1;
@@ -67,9 +67,6 @@ navigator.mediaDevices.getUserMedia({
 startBtn.onclick = () => {
   photos = [];
   currentPhoto = 0;
-  offset = { x: 0, y: 0 };
-  scale = 1;
-  qrContainer.hidden = true;
   startBtn.disabled = true;
   updateCounter();
   countdownShot();
@@ -102,7 +99,7 @@ function countdownShot() {
 
 function triggerFlash() {
   flash.classList.add("active");
-  setTimeout(() => flash.classList.remove("active"), 150);
+  setTimeout(() => flash.classList.remove("active"), 120);
 }
 
 // =======================
@@ -117,46 +114,42 @@ function showPreview() {
   previewCanvas.style.width = PREVIEW_WIDTH + "px";
   previewCanvas.style.height = PREVIEW_HEIGHT + "px";
 
-  const ctx = previewCanvas.getContext("2d");
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  previewCanvas.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  autoCenterFace();
+  // RESET zoom — IMPORTANT
+  offset = { x: 0, y: 0 };
+  scale = 1;
+
   drawPreview();
   enableInteraction();
 }
 
 // =======================
-// AUTO CENTER FACE (SAFE DEFAULT)
-// =======================
-function autoCenterFace() {
-  const baseScale = FRAME_WIDTH / video.videoWidth;
-  scale = 1.1; // gentle zoom
-  offset = {
-    x: (PREVIEW_WIDTH - video.videoWidth * baseScale) / 2,
-    y: (PREVIEW_HEIGHT - video.videoHeight * baseScale) / 2
-  };
-}
-
-// =======================
-// DRAW PREVIEW (EXACT MATCH)
+// DRAW PREVIEW (NO FORCED ZOOM)
 // =======================
 function drawPreview() {
   if (video.readyState < 2) return;
+
   const ctx = previewCanvas.getContext("2d");
   ctx.clearRect(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
-  const frame = FRAME_POSITIONS[currentPhoto];
-  const baseScale = FRAME_WIDTH / video.videoWidth;
-  const finalScale = baseScale * scale;
+  // Fit video naturally into frame
+  const ratio = Math.max(
+    FRAME_WIDTH / video.videoWidth,
+    FRAME_HEIGHT / video.videoHeight
+  ) * scale;
 
-  const w = video.videoWidth * finalScale;
-  const h = video.videoHeight * finalScale;
+  const w = video.videoWidth * ratio;
+  const h = video.videoHeight * ratio;
+
+  const frame = FRAME_POSITIONS[currentPhoto];
 
   const px = (frame.x / STRIP_WIDTH) * PREVIEW_WIDTH + offset.x;
   const py = (frame.y / STRIP_HEIGHT) * PREVIEW_HEIGHT + offset.y;
 
   ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, px, py, w, h);
 
+  // Overlay frame
   const frameImg = new Image();
   frameImg.src = "frames/" + frameSelect.value;
   frameImg.onload = () => {
@@ -222,8 +215,17 @@ function distance(a, b) {
 // CONFIRM / RETAKE
 // =======================
 confirmBtn.onclick = () => {
-  saveIndividualPhoto();
-  photos.push({ offset: { ...offset }, scale });
+  const snapshot = document.createElement("canvas");
+  snapshot.width = video.videoWidth;
+  snapshot.height = video.videoHeight;
+  snapshot.getContext("2d").drawImage(video, 0, 0);
+
+  photos.push({
+    image: snapshot,
+    offset: { ...offset },
+    scale
+  });
+
   previewContainer.hidden = true;
   currentPhoto++;
 
@@ -232,7 +234,7 @@ confirmBtn.onclick = () => {
     countdownShot();
   } else {
     photoCounter.innerText = "";
-    buildFinalStrip();
+    generateFinalStrip();
   }
 };
 
@@ -242,52 +244,30 @@ retakeBtn.onclick = () => {
 };
 
 // =======================
-// SAVE INDIVIDUAL PHOTO
+// FINAL STRIP (ONLY SAVE AT END)
 // =======================
-function saveIndividualPhoto() {
-  const c = document.createElement("canvas");
-  c.width = FRAME_WIDTH;
-  c.height = FRAME_HEIGHT;
-  const ctx = c.getContext("2d");
-
-  const baseScale = FRAME_WIDTH / video.videoWidth;
-  const finalScale = baseScale * scale;
-
-  ctx.drawImage(
-    video,
-    0, 0, video.videoWidth, video.videoHeight,
-    offset.x * (FRAME_WIDTH / PREVIEW_WIDTH),
-    offset.y * (FRAME_HEIGHT / PREVIEW_HEIGHT),
-    video.videoWidth * finalScale,
-    video.videoHeight * finalScale
-  );
-
-  const a = document.createElement("a");
-  a.download = `photo_${currentPhoto + 1}.png`;
-  a.href = c.toDataURL("image/png");
-  a.click();
-}
-
-// =======================
-// FINAL STRIP + QR CODE
-// =======================
-function buildFinalStrip() {
+function generateFinalStrip() {
   photostripCanvas.width = STRIP_WIDTH;
   photostripCanvas.height = STRIP_HEIGHT;
   const ctx = photostripCanvas.getContext("2d");
 
   photos.forEach((p, i) => {
     const frame = FRAME_POSITIONS[i];
-    const baseScale = FRAME_WIDTH / video.videoWidth;
-    const finalScale = baseScale * p.scale;
+
+    const ratio = Math.max(
+      FRAME_WIDTH / p.image.width,
+      FRAME_HEIGHT / p.image.height
+    ) * p.scale;
+
+    const w = p.image.width * ratio;
+    const h = p.image.height * ratio;
 
     ctx.drawImage(
-      video,
-      0, 0, video.videoWidth, video.videoHeight,
+      p.image,
+      0, 0, p.image.width, p.image.height,
       frame.x + p.offset.x * (STRIP_WIDTH / PREVIEW_WIDTH),
       frame.y + p.offset.y * (STRIP_HEIGHT / PREVIEW_HEIGHT),
-      video.videoWidth * finalScale,
-      video.videoHeight * finalScale
+      w, h
     );
   });
 
@@ -295,16 +275,8 @@ function buildFinalStrip() {
   frameImg.src = "frames/" + frameSelect.value;
   frameImg.onload = () => {
     ctx.drawImage(frameImg, 0, 0, STRIP_WIDTH, STRIP_HEIGHT);
-
-    const url = photostripCanvas.toDataURL("image/png");
-    download.href = url;
+    download.href = photostripCanvas.toDataURL("image/png");
     download.hidden = false;
-
-    // QR code
-    qrContainer.innerHTML =
-      `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}">`;
-    qrContainer.hidden = false;
-
     startBtn.disabled = false;
   };
 }
