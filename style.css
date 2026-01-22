@@ -33,3 +33,27 @@ button {
   text-align: center;
   color: red;
 }
+
+#photoCounter {
+  font-size: 24px;
+  margin-top: 10px;
+}
+
+#flash {
+  position: fixed;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  z-index: 9999;
+}
+
+#flash.active {
+  opacity: 1;
+}
+
+#qrContainer img {
+  width: 160px;
+  margin-top: 10px;
+}
